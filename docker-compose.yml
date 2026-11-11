@@ -16,6 +16,7 @@ services:
   app:
     build: .
     image: shopcore-rs:latest
+    pull_policy: build
     depends_on:
       db:
         condition: service_healthy
@@ -28,7 +29,11 @@ services:
       - "8000:8000"
 
   bank:
+    # Same image as app (it contains both binaries). `build` is needed so a
+    # clean machine builds it locally instead of trying to pull it.
+    build: .
     image: shopcore-rs:latest
+    pull_policy: build
     depends_on:
       - app
     entrypoint: ["bank-sim"]
