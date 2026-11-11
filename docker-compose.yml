@@ -1,0 +1,41 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: shopcore
+      POSTGRES_PASSWORD: shopcore
+      POSTGRES_DB: shopcore
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U shopcore -d shopcore"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  app:
+    build: .
+    image: shopcore-rs:latest
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://shopcore:shopcore@db:5432/shopcore
+      BANK_WEBHOOK_SECRET: ${BANK_WEBHOOK_SECRET:-dev-webhook-secret}
+      BIND_ADDR: 0.0.0.0:8000
+      RUST_LOG: info
+    ports:
+      - "8000:8000"
+
+  bank:
+    image: shopcore-rs:latest
+    depends_on:
+      - app
+    entrypoint: ["bank-sim"]
+    environment:
+      SHOPCORE_URL: http://app:8000
+      BANK_WEBHOOK_SECRET: ${BANK_WEBHOOK_SECRET:-dev-webhook-secret}
+      SETTLE_INTERVAL_SECS: "10"
+
+volumes:
+  pgdata:
